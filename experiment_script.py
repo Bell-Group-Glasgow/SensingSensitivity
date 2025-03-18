@@ -56,7 +56,11 @@ class DigitalDiscoveryReaction():
     
     def check_sample_setup(self):
         """Before more smaples are run, the system needs to be setup and checked by the chemist."""
+
+
         
+
+    
         # The first check: if there is enough solvent.
         check_1 = False
         exit_loop = False
@@ -66,30 +70,38 @@ class DigitalDiscoveryReaction():
             if check_1_input.lower() in ['y', 'yes']:
                 check_1 = True
                 exit_loop = True
+                print()
 
             elif check_1_input.lower() in ['e', 'exit']:
                 exit_loop = True
+
+            elif check_1_input.lower() in ['no', 'n']:
+                print('Please make sure to lift the solvent line above the liquid level.')
+
             else:
                 print('Please add an appropiate input')
-                print()
+
 
         # The second check: if flasks are setup appropiatly.
-        check_2 = False
         exit_loop = False
         if check_1 == True:
             while not exit_loop:
-                check_2_input = input("Have you connected the sample flask to the ReactIR? (Yes/No/Exit) : ")
+                check_2_input = input("Have you connected the sample flask to the ReactIR? (Yes/No/Exit): ")
             
-            if check_2_input.lower() in ['y', 'yes']:
-                self.sample_setup_appropiate = True
-                print(self.sample_setup_appropiate)
-                exit_loop = True
+                if check_2_input.lower() in ['y', 'yes']:
+                    self.sample_setup_appropiate = True
+                    print(self.sample_setup_appropiate)
+                    exit_loop = True
+                    print()
 
-            elif check_2_input.lower() in ['e', 'exit']:
-                exit_loop = True
-            else:
-                print('Please add an appropiate input')
-                print()
+                elif check_2_input.lower() in ['e', 'exit']:
+                    exit_loop = True
+
+                elif check_2_input.lower() in ['no', 'n']:
+                    print('Please make sure to connect the sample flask to the ReactIR.')
+
+                else:
+                    print('Please add an appropiate input')
     
     def collect_smaples(self):
         """Makes samples and their IR spectra."""
@@ -140,4 +152,59 @@ class DigitalDiscoveryReaction():
         self.stop_experiment()
 
 if __name__=='__main__':
-    print('What si ')
+    # Example use
+
+    solvent_valve = 5
+    waste_valve = 12
+    water_valve = 8    # Is this actualy needed?
+    ir_valve = 4
+    prime_volume = 2
+
+    # experiment1 = DigitalDiscoveryReaction('Test1', solvent_valve, waste_valve, water_valve, ir_valve, prime_volume)
+    # experiment1.run_experiment()
+
+
+
+
+
+    
+    # The first check: if there is enough solvent.
+    check_1 = False
+    exit_loop = False
+    while not exit_loop:
+        check_1_input = input("Have you lifted the solvent line above the liquid level? (Yes/No/Exit): ")
+        
+        if check_1_input.lower() in ['y', 'yes']:
+            check_1 = True
+            exit_loop = True
+            print()
+
+        elif check_1_input.lower() in ['e', 'exit']:
+            exit_loop = True
+
+        elif check_1_input.lower() in ['no', 'n']:
+            print('Please make sure to lift the solvent line above the liquid level.')
+
+        else:
+            print('Please add an appropiate input')
+
+    # The second check: if flasks are setup appropiatly.
+    check_2 = False
+    exit_loop = False
+    if check_1 == True:
+        while not exit_loop:
+            check_2_input = input("Have you connected the sample flask to the ReactIR? (Yes/No/Exit): ")
+        
+            if check_2_input.lower() in ['y', 'yes']:
+                print('all_passed')
+                exit_loop = True
+
+            elif check_2_input.lower() in ['e', 'exit']:
+                exit_loop = True
+
+            elif check_2_input.lower() in ['no', 'n']:
+                print('Please make sure to connect the sample flask to the ReactIR.')
+
+            else:
+                print('Please add an appropiate input')
+
