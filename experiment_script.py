@@ -4,10 +4,20 @@ import time
 from modified_pump import Pump
 from ir_machine import IR_machine
 
+
 class SensingSensitivityReaction():
     """The procedure the pump and IR spectrometer follows to run experiments for the digital discovery paper."""
 
-    def __init__(self, experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed):
+    def __init__(self, experiment_name, icIR_template_name, spectra_location, spectra_path, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed):
+                
+        # IR experiment information
+        self.icIR_template_name = icIR_template_name                                    # The template used to start an icIR machine.
+        self.spectra_location = spectra_location                                        # The location where the specta will be saved. This is used by icIR opc server.
+        self.spectra_path = spectra_path                                                # The path (string) to the folder to save IR spectra. This is used by the python class.
+
+        # Experiment information
+        self.experiment_run_time = experiment_run_time                                  # The time (s) the experiment should last for. It dictates how many samples can be sent in this time interval.
+        self.check_experiment_name(experiment_name)                                     # Checks if the experiment exists already.
         self.experiment_name = experiment_name                                          # The name of the experiment, which will also be used to save spectra file names.
 
         # Pump valve information
@@ -17,10 +27,6 @@ class SensingSensitivityReaction():
         self.water_valve = water_valve                                                  # The pump's valve number connected to the water flask.
         self.ir_valve = ir_valve                                                        # The pump's valve number connected to the IR machine.
         self.air_valve = air_valve                                                      # The pump's valve number connected to air.
-
-        # Consistant attributes across experiments.
-        self.icIR_template_name = icIR_template_name                                    # The template used to start an icIR machine.
-        self.spectra_location = spectra_location                                        # The location where the specta will be saved.
 
         # Priming information
         self.prime_speed = prime_speed                                                  # The speed of the pumps (mL/min) to prime lines with.   
@@ -35,9 +41,6 @@ class SensingSensitivityReaction():
         self.sample_volume = sample_volume                                              # The volumes (mL) of the samples to be drawn by the pump.
         self.sample_spectrum_time = sample_spectrum_time                                # The time (s) the IR experiment (to collect sample spectrum) should run for.
         self.sample_pump_speed = sample_pump_speed                                      # The speed (mL/min) pumps draw and collect samples.
-
-        # Experiment information
-        self.experiment_run_time = experiment_run_time                                  # The time (s) the experiment should last for. It dictates how many samples can be sent in this time interval.
 
         # Cleaning information
         self.clean_speed = clean_speed                                                  # The speed (mL/min) pumps draw and dispense to clean lines.
@@ -54,7 +57,16 @@ class SensingSensitivityReaction():
 
         # Other required attributes
         self.sample_setup_appropiate = False                                            # Boolean to check if system has been set up well for sample preperation.
+        self.requires_50_50_mix = False                                                 # Booolean to check if the experiment is running with 50_50 mix samples.
     
+    def check_experiment_name(self, experiment_name):
+        """Checks if the exerpiment name already has any files associated with it."""
+
+        files_in_dir = os.listdir(self.spectra_path)
+        experiment_spectra = spectra_path + '.iCIR'
+        if experiment_spectra in files_in_dir:
+            raise NameError(f'The spectra for \'{experiment_name}\' has been collected already. Change experiment name.')
+
     def prime_lines(self):
         """Priming solvent->waste lines with solvent."""
 
@@ -102,8 +114,43 @@ class SensingSensitivityReaction():
         
         print()
     
+    def additional_mix_sample_check(self):
+        """An additional check if the experiment is to be trailed with a 50/50 sample mix."""
+
+        exit_loop = False
+        while not exit_loop:
+            mix_input = input("Do you have to change the sample vial to a 50/50 mix after 2 hours? (Yes/No/Exit): ")
+            
+            if mix_input.lower() in ['y', 'yes']:
+                self.requires_50_50_mix = True
+                exit_loop = True
+
+            elif mix_input.lower() in ['e', 'exit', 'no', 'n']:
+                exit_loop = True
+
+            else:
+                print('Please add an appropiate input')
+        print()
+    
+    def mix_check(self):
+        """Checking is 50/50 sample has been chaged."""
+
+        exit_loop = False
+        while not exit_loop:
+            mix_input = input("Did you change the sample vial to a 50/50 mix? (Yes/No): ")
+            
+            if mix_input.lower() in ['y', 'yes']:
+                return True
+
+            elif mix_input.lower() in ['no', 'n']:
+                return False
+
+            else:
+                print('Please add an appropiate input')
+        print()
+
     def check_sample_setup(self):
-        """Before more smaples are run, the system needs to be setup and checked by the chemist."""
+        """Before more samples are run, the system needs to be setup and checked by the chemist."""
     
         # The first check: if there is enough solvent.
         check_1 = False
@@ -147,18 +194,23 @@ class SensingSensitivityReaction():
                     print('Please add an appropiate input')
         print()
         
-    def collect_sample(self):
-        """Collecting the spectra of a sample"""
+    def collect_sample(self, mix=False):
+        """Collecting the spectra of a sample.
+        mix: True if the sample is a 50/50 mixture."""
 
         # Aspirate from Ir machine
-        print('Aspirating the smaple from IR machine.')
+        print('Aspirating the sample from IR machine.')
         self.pump.switch(self.ir_valve)
         self.pump.move(self.sample_volume, self.sample_pump_speed)
 
         # resume spectra aquisition
         print('Collecting the spectrum of the sample.')
         self.ir_machine.resume_experiment()
-        time.sleep(self.sample_spectrum_time)
+        if mix:
+            time.sleep(180)
+        else:
+            time.sleep(self.sample_spectrum_time)
+
         self.ir_machine.pause_experiment()
         
         # Dispensing back the drawn volume
@@ -168,19 +220,36 @@ class SensingSensitivityReaction():
         print()
         
     def collect_first_sample(self):
-        """Collecting spectra of smaple."""
+        """Collecting spectra of sample."""
         
         print('Collecting the spectra of the first sample')
         self.collect_sample()
         
     def continue_sample_collection(self):
+        """Collecting samples for the remainder of the experiment run time."""
 
         # Run a loop untill the experiment time has been reached.
         print('Collecting the remainder sample spectra.')
         start_time = time.time()
-        while time.time()-start_time<self.experiment_run_time:
-            print(f'Total experiment run time {time.time()-start_time} / {self.experiment_run_time}')
-            self.collect_sample()
+        continue_loop = True
+        mix_check_bool = True
+        while time.time()-start_time<self.experiment_run_time and continue_loop:
+
+            print(f'Total experiment run time {round((time.time()-start_time)/60, 4)} / {self.experiment_run_time/60} min')
+            
+            # If it a 50/50 mix is required and 2 hours have elapsed, the sample needs to be changed then an additional 3 scans are required.
+            if self.requires_50_50_mix:
+                if (time.time()-start_time)>7200 and mix_check_bool:
+                    if self.mix_check():
+                        self.collect_sample(mix=True)
+                        mix_check_bool = False
+                    else:
+                        continue_loop = False
+                        mix_check_bool = False
+                else:
+                    self.collect_sample()
+            else:
+                self.collect_sample()
 
     def stop_experiment(self):
         """Stopping IR experiment."""
@@ -243,6 +312,7 @@ class SensingSensitivityReaction():
         self.prime_lines()
         self.collect_solvent_sample()
         self.check_sample_setup()
+        self.additional_mix_sample_check()
         
         # Checking if the experiment has been set up appropiatly.
         if self.sample_setup_appropiate:
@@ -292,6 +362,7 @@ if __name__=='__main__':
     # Spectra information
     icIR_template_name = 'DigitalDiscoveryProject'                            
     spectra_location = 'Digital Discovery Project\\' + experiment_name
+    spectra_path = ''
     
-    experiment1 = SensingSensitivityReaction(experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed)
+    experiment1 = SensingSensitivityReaction(experiment_name, icIR_template_name, spectra_location, spectra_path, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed)
     experiment1.run_experiment()
