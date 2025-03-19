@@ -7,10 +7,8 @@ from ir_machine import IR_machine
 class DigitalDiscoveryReaction():
     """The procedure the pump and IR spectrometer follows to run experiments for the digital discovery paper."""
 
-    def __init__(self, experiment_name, solvent_valve, waste_valve, water_valve, ir_valve, prime_volume):
+    def __init__(self, experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time):
         self.experiment_name = experiment_name                                          # The name of the experiment, which will also be used to save spectra file names.
-
-        # General experiment information
 
         # Pump valve information
         self.solvent_valve = solvent_valve                                              # The pump's valve number connected to the solvent flask.
@@ -19,10 +17,25 @@ class DigitalDiscoveryReaction():
         self.ir_valve = ir_valve                                                        # The pump's valve number connected to the IR machine.
 
         # Consistant attributes across experiments.
-        self.icIR_template_name = 'Digital Discovery Template'                          # The template used to start an icIR machine.
-        self.spectra_location = 'Digital Discovery Project\\' + self.experiment_name    # The location where the specta will be saved.
-        self.pump_speed = 0.07                                                          # The speeds (ml/min) pumps operate at.
+        self.icIR_template_name = icIR_template_name                                    # The template used to start an icIR machine.
+        self.spectra_location = spectra_location                                        # The location where the specta will be saved.
+
+        # Priming information
+        self.prime_speed = prime_speed                                                  # The speed of the pumps (mL/min) to prime lines with.   
         self.prime_volume = prime_volume                                                # The volume of solvent to prime lines with.
+
+        # Solvent sample information
+        self.solvent_sample_volume = solvent_sample_volume                              # The volume (mL) of solvent required to reach IR machine to collect spectra
+        self.solvent_spectrum_time = solvent_spectrum_time                              # The time (s) the IR experiment (to collect solvent spectrum) should run for.
+        self.solvent_pump_speed = solvent_pump_speed                                    # The speed (mL/min) pumpd draw and collect solvent sample.
+
+        # Sample information
+        self.sample_volume = sample_volume                                              # The volumes (mL) of the samples to be drawn by the pump.
+        self.sample_spectrum_time = sample_spectrum_time                                # The time (s) the IR experiment (to collect sample spectrum) should run for.
+        self.sample_pump_speed = sample_pump_speed                                      # The speed (mL/min) pumps draw and collect samples.
+
+        # Experiment information
+        self.experiment_run_time = experiment_run_time                                  # The time the experiment should last for. It dictates how many samples can be sent in this time interval.
 
         # Only one pump and an IR machine is required for this project.
         self.pump = Pump('COM1', 12)
@@ -31,35 +44,85 @@ class DigitalDiscoveryReaction():
         # Other required attributes
         self.sample_setup_appropiate = False                                            # Boolean to check if system has been set up well for sample preperation.
 
+    # def shut_down(self):
+    #     """Shuts down pumps and ir machine."""
+
+    #     # Shutting down
+    #     self.ir_machine.shutdown()
+    #     self.pump.shutdown()
+
+
+
+    # def stop_experiment():
+    #     stop icIr
+
+    # def clean():
+        
+    #     # wet solvet ->ir (3 mL)
+    #     # Wataer -> ir (4mL())
+    #     # solvent -> ir (3mL)
+    #     #air (port 1) -> ir (20mL)
+
+
+
+
+
+
+
+
+
+
+
+
+    
     def prime_lines(self):
         """Priming solvent->waste and solvent->IR machine lines with solvent."""
 
+        print('Priming solvent->waste lines')
+        print()
         # Priming solvent->waste
-        self.pump.transfer(self.solvent_valve, self.waste_valve, self.prime_volume, self.pump_speed, self.pump_speed)
+        self.pump.transfer(
+            from_position=self.solvent_valve, 
+            to_position=self.waste_valve,
+            volume=self.prime_volume, 
+            aspirate_speed=self.prime_speed,
+            dispense_speed=self.prime_speed)
+
+    def collect_solvent_sample(self):
+        """Collects the spectrum of the solvent."""
         
-        # Priming solvent->IR_machine lines
-        self.pump.transfer(self.solvent_valve, self.waste_valve, self.prime_volume, self.pump_speed, self.pump_speed)
-
-    def start_IR_aquisition(self):
-        """Starts IR spectra aquisition then waiting 60 seconds collect solvent spectra."""
-        self.ir_machine.start_experiment(self.experiment_name, self.icIR_template_name)     # NOTE: its possible to only change the scan time via python. I suggest making a template that has already been set to 2h and 2m scans 
-        time.sleep(60)
-
-    def collect_first_sample(self):
-        """Analysing the first sample then pausing spectra aquisition."""
+        # Transfering sample volume
+        print('Transfering solvent to IR machine for solvent spectra collection')
+        print()
+        self.pump.transfer(
+            from_position=self.solvent_valve,
+            to_position=self.ir_valve,
+            volume=self.solvent_sample_volume,
+            aspirate_speed=self.solvent_pump_speed,
+            dispense_speed=self.solvent_pump_speed)
         
-        # Collecting sample
-        self.pump.transfer(self.ir_valve, self.solvent_valve, 1.5)
+        # Strating icIR experiment 
+        print('Starting icIR experiment')
+        self.ir_machine.start_experiment(self.spectra_location, self.icIR_template_name)
 
-        # Pausing spectra aquisiton
+        # Collecting solvent spectra
+        print('Collecting solvent sample spectra')
+        time.sleep(self.solvent_spectrum_time)
+
         self.ir_machine.pause_experiment()
+
+        # transfer from IR back to solvent
+        print('Transfering solvent sample back to ir')
+        self.pump.transfer(
+            from_position=self.ir_valve,
+            to_position=self.solvent_valve,
+            volume=self.solvent_sample_volume*1.5,
+            aspirate_speed=self.solvent_pump_speed,
+            dispense_speed=self.solvent_pump_speed
+        )
     
     def check_sample_setup(self):
         """Before more smaples are run, the system needs to be setup and checked by the chemist."""
-
-
-        
-
     
         # The first check: if there is enough solvent.
         check_1 = False
@@ -81,7 +144,6 @@ class DigitalDiscoveryReaction():
             else:
                 print('Please add an appropiate input')
 
-
         # The second check: if flasks are setup appropiatly.
         exit_loop = False
         if check_1 == True:
@@ -102,109 +164,74 @@ class DigitalDiscoveryReaction():
 
                 else:
                     print('Please add an appropiate input')
-    
-    def collect_smaples(self):
-        """Makes samples and their IR spectra."""
+        print()
+
+    def collect_first_sample(self):
+        """Collecting the spectra of samples"""
+
+        # Aspirate from Ir machine
+        print('Aspirating the frist smaple from IR machine.')
+        self.pump.switch(self.ir_valve)
+        self.move(self.sample_volume, self.sample_pump_speed)
+
+        # resume spectra aquisition
+        print('Collecting the spectrum of the first sample.')
+        self.ir_machine.resume_experiment()
+        time.sleep(self.sample_spectrum_time)
+        self.ir_machine.pause_experiment()
         
-        # Seeing if checks have passed.
-        if self.sample_setup_appropiate:
+        # Dispensing back the drawn volume
+        print('Returning the first sample back to IR.')
+        self.pump.move(0, self.sample_pump_speed)
 
-            print('Entering repeat loop.')
-            time.sleep(5)
+    def continue_sample_collection(self):
 
+        # run experiment for 4 hours (loop should be continue for 4 hours)
 
-            # Making samples
-            for _ in range(3): # ETA ~ 4.5h.
-                print(f'On repeat {_}')
+        # Run a loop untill the experiment time has been reached.
+        for _ in range(x):
+            self.collect_first_sample()
 
-                # Pump Amide solution through IR.
-                self.pump.switch(self.ir_valve)
-                self.pump.move(0.9, self.pump_speed)
-                if _ == 0:                                      # Resuming IR experiment (which has been previously paused).
-                    self.ir_machine.resume_experiment()
-                self.pump.switch(self.solvent_valve)
-                self.pump.move()
-
-                # Waiting for 3 seconds.
-                time.sleep(3)
-
-                # Pump amide back to reactor.
-                self.pump.transfer(self.solvent_valve, self.ir_valve, 1, self.pump_speed)
-    
-    def stop_experiment(self):
-        """Stops spectra aquisition, shuts down pumps and ir machine."""
-        
-        # Stoping spectra aquisition
-        self.ir_machine.stop_experiment()
-
-        # Shutting down
-        self.ir_machine.shutdown()
-        self.pump.shutdown()
-    
     def run_experiment(self):
         """Runnning through a complete experiment."""
 
         self.prime_lines()
-        self.start_IR_aquisition()
-        self.collect_first_sample()
+        self.collect_solvent_sample()
         self.check_sample_setup()
-        self.collect_smaples()
-        self.stop_experiment()
+        
+        # Checking if the experiment has been set up appropiatly.
+        if self.sample_setup_appropiate:
+            self.collect_fist_sample()
+            self.continue_sample_collection() # Pusedo code
+            self.stop_experiment()          # Nothing
+            self.clean()                    # Pusedo code
 
 if __name__=='__main__':
     # Example use
 
     solvent_valve = 5
+    wet_solvent_valve = 6
     waste_valve = 12
-    water_valve = 8    # Is this actualy needed?
+    water_valve = 8
     ir_valve = 4
+
+    prime_speed = 0.07          # To be changed
     prime_volume = 2
 
+    solvent_sample_volume = 1
+    solvent_pump_speed = 0.07
+    solvent_spectrum_time = 65
+
+    sample_volume = 0.9
+    sample_spectrum_time = 55
+    sample_pump_speed = 0.07    # To be changed
+    
+    experiment_run_time = 14400     # 4 hours in sec
+
+
+
+    experiment_name = 'Test1'
+    icIR_template_name = 'DigitalDiscoveryProject'                            
+    spectra_location = 'Digital Discovery Project\\' + experiment_name    
     # experiment1 = DigitalDiscoveryReaction('Test1', solvent_valve, waste_valve, water_valve, ir_valve, prime_volume)
     # experiment1.run_experiment()
-
-
-
-
-
-    
-    # The first check: if there is enough solvent.
-    check_1 = False
-    exit_loop = False
-    while not exit_loop:
-        check_1_input = input("Have you lifted the solvent line above the liquid level? (Yes/No/Exit): ")
-        
-        if check_1_input.lower() in ['y', 'yes']:
-            check_1 = True
-            exit_loop = True
-            print()
-
-        elif check_1_input.lower() in ['e', 'exit']:
-            exit_loop = True
-
-        elif check_1_input.lower() in ['no', 'n']:
-            print('Please make sure to lift the solvent line above the liquid level.')
-
-        else:
-            print('Please add an appropiate input')
-
-    # The second check: if flasks are setup appropiatly.
-    check_2 = False
-    exit_loop = False
-    if check_1 == True:
-        while not exit_loop:
-            check_2_input = input("Have you connected the sample flask to the ReactIR? (Yes/No/Exit): ")
-        
-            if check_2_input.lower() in ['y', 'yes']:
-                print('all_passed')
-                exit_loop = True
-
-            elif check_2_input.lower() in ['e', 'exit']:
-                exit_loop = True
-
-            elif check_2_input.lower() in ['no', 'n']:
-                print('Please make sure to connect the sample flask to the ReactIR.')
-
-            else:
-                print('Please add an appropiate input')
-
