@@ -256,7 +256,6 @@ class SensingSensitivityReaction():
 if __name__=='__main__':
     # Example use
     
-    
     # Valve information
     solvent_valve = 5
     wet_solvent_valve = 6
