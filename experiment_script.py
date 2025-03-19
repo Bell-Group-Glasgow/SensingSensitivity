@@ -4,17 +4,19 @@ import time
 from modified_pump import Pump
 from ir_machine import IR_machine
 
-class DigitalDiscoveryReaction():
+class SensingSensitivityReaction():
     """The procedure the pump and IR spectrometer follows to run experiments for the digital discovery paper."""
 
-    def __init__(self, experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time):
+    def __init__(self, experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed):
         self.experiment_name = experiment_name                                          # The name of the experiment, which will also be used to save spectra file names.
 
         # Pump valve information
         self.solvent_valve = solvent_valve                                              # The pump's valve number connected to the solvent flask.
+        self.wet_solvent_valve = wet_solvent_valve                                      # The pump's valve number connected to the wet solvent flask.
         self.waste_valve = waste_valve                                                  # The pump's valve number connected to the waste flask.
         self.water_valve = water_valve                                                  # The pump's valve number connected to the water flask.
         self.ir_valve = ir_valve                                                        # The pump's valve number connected to the IR machine.
+        self.air_valve = air_valve                                                      # The pump's valve number connected to air.
 
         # Consistant attributes across experiments.
         self.icIR_template_name = icIR_template_name                                    # The template used to start an icIR machine.
@@ -35,48 +37,26 @@ class DigitalDiscoveryReaction():
         self.sample_pump_speed = sample_pump_speed                                      # The speed (mL/min) pumps draw and collect samples.
 
         # Experiment information
-        self.experiment_run_time = experiment_run_time                                  # The time the experiment should last for. It dictates how many samples can be sent in this time interval.
+        self.experiment_run_time = experiment_run_time                                  # The time (s) the experiment should last for. It dictates how many samples can be sent in this time interval.
 
+        # Cleaning information
+        self.clean_speed = clean_speed                                                  # The speed (mL/min) pumps draw and dispense to clean lines.
+        
+        self.wet_solvent_clean_volume = wet_solvent_clean_volume                        # The volume (mL) of wet solvent to clean lines with. 
+        self.water_clean_volume = water_clean_volume                                    # The volume (mL) of water to clean lines with.
+        self.solvent_clean_volume = solvent_clean_volume                                # The volume (mL) of solvent to clean lines with.
+        self.air_clean_volume = air_clean_volume                                        # The volume (mL) of air to dry lines with.
+        
+        
         # Only one pump and an IR machine is required for this project.
         self.pump = Pump('COM1', 12)
         self.ir_machine = IR_machine('opc.tcp://localhost:62552/iCOpcUaServer')
 
         # Other required attributes
         self.sample_setup_appropiate = False                                            # Boolean to check if system has been set up well for sample preperation.
-
-    # def shut_down(self):
-    #     """Shuts down pumps and ir machine."""
-
-    #     # Shutting down
-    #     self.ir_machine.shutdown()
-    #     self.pump.shutdown()
-
-
-
-    # def stop_experiment():
-    #     stop icIr
-
-    # def clean():
-        
-    #     # wet solvet ->ir (3 mL)
-    #     # Wataer -> ir (4mL())
-    #     # solvent -> ir (3mL)
-    #     #air (port 1) -> ir (20mL)
-
-
-
-
-
-
-
-
-
-
-
-
     
     def prime_lines(self):
-        """Priming solvent->waste and solvent->IR machine lines with solvent."""
+        """Priming solvent->waste lines with solvent."""
 
         print('Priming solvent->waste lines')
         print()
@@ -93,7 +73,6 @@ class DigitalDiscoveryReaction():
         
         # Transfering sample volume
         print('Transfering solvent to IR machine for solvent spectra collection')
-        print()
         self.pump.transfer(
             from_position=self.solvent_valve,
             to_position=self.ir_valve,
@@ -120,6 +99,8 @@ class DigitalDiscoveryReaction():
             aspirate_speed=self.solvent_pump_speed,
             dispense_speed=self.solvent_pump_speed
         )
+        
+        print()
     
     def check_sample_setup(self):
         """Before more smaples are run, the system needs to be setup and checked by the chemist."""
@@ -165,33 +146,97 @@ class DigitalDiscoveryReaction():
                 else:
                     print('Please add an appropiate input')
         print()
-
-    def collect_first_sample(self):
-        """Collecting the spectra of samples"""
+        
+    def collect_sample(self):
+        """Collecting the spectra of a sample"""
 
         # Aspirate from Ir machine
-        print('Aspirating the frist smaple from IR machine.')
+        print('Aspirating the smaple from IR machine.')
         self.pump.switch(self.ir_valve)
-        self.move(self.sample_volume, self.sample_pump_speed)
+        self.pump.move(self.sample_volume, self.sample_pump_speed)
 
         # resume spectra aquisition
-        print('Collecting the spectrum of the first sample.')
+        print('Collecting the spectrum of the sample.')
         self.ir_machine.resume_experiment()
         time.sleep(self.sample_spectrum_time)
         self.ir_machine.pause_experiment()
         
         # Dispensing back the drawn volume
-        print('Returning the first sample back to IR.')
+        print('Returning the sample back to IR.')
         self.pump.move(0, self.sample_pump_speed)
 
+        print()
+        
+    def collect_first_sample(self):
+        """Collecting spectra of smaple."""
+        
+        print('Collecting the spectra of the first sample')
+        self.collect_sample()
+        
     def continue_sample_collection(self):
 
-        # run experiment for 4 hours (loop should be continue for 4 hours)
-
         # Run a loop untill the experiment time has been reached.
-        for _ in range(x):
-            self.collect_first_sample()
+        print('Collecting the remainder sample spectra.')
+        start_time = time.time()
+        while time.time()-start_time<self.experiment_run_time:
+            print(f'Total experiment run time {time.time()-start_time} / {self.experiment_run_time}')
+            self.collect_sample()
 
+    def stop_experiment(self):
+        """Stopping IR experiment."""
+        
+        print('Stopping IR experiment')
+        self.ir_machine.stop_experiment()
+        print()
+
+    def clean(self):
+        """Cleaning the system."""
+        
+        print('Cleaning system')
+        
+        # Cleaning ir lines with wet solvent
+        print('Cleaning ir lines with wet solvent.')
+        self.pump.transfer(
+            from_position=self.wet_solvent_valve,
+            to_position=self.ir_valve,
+            volume=self.wet_solvent_clean_volume,
+            aspirate_speed=self.clean_speed,
+            dispense_speed=self.clean_speed)
+        
+        # Cleaning ir lines with water.
+        print('Cleaning ir lines with water.')
+        self.pump.transfer(
+            from_position=self.water_valve,
+            to_position=self.ir_valve,
+            volume=self.water_clean_volume,
+            aspirate_speed=self.clean_speed,
+            dispense_speed=self.clean_speed)
+    
+        # Cleaning ir lines with solvent.
+        print('Cleaning ir lines with solvent.')
+        self.pump.transfer(
+            from_position=self.solvent_valve,
+            to_position=self.ir_valve,
+            volume=self.solvent_clean_volume,
+            aspirate_speed=self.clean_speed,
+            dispense_speed=self.clean_speed)
+        
+        # Cleaning ir lines with air.
+        print('Drying ir lines with air.')
+        self.pump.transfer(
+            from_position=self.air_valve,
+            to_position=self.ir_valve,
+            volume=self.air_clean_volume,
+            aspirate_speed=self.clean_speed,
+            dispense_speed=self.clean_speed)    
+    
+    def shut_down(self):
+        """Shuts down pumps and ir machine."""
+
+        # Shutting down
+        self.ir_machine.shutdown()
+        self.pump.shutdown()
+    
     def run_experiment(self):
         """Runnning through a complete experiment."""
 
@@ -201,37 +246,53 @@ class DigitalDiscoveryReaction():
         
         # Checking if the experiment has been set up appropiatly.
         if self.sample_setup_appropiate:
-            self.collect_fist_sample()
-            self.continue_sample_collection() # Pusedo code
-            self.stop_experiment()          # Nothing
-            self.clean()                    # Pusedo code
+            self.collect_first_sample()
+            self.continue_sample_collection()
+            self.stop_experiment()          
+            self.clean()
+        
+        self.shut_down()                 
 
 if __name__=='__main__':
     # Example use
-
+    
+    
+    # Valve information
     solvent_valve = 5
     wet_solvent_valve = 6
     waste_valve = 12
     water_valve = 8
+    air_valve = 1
     ir_valve = 4
 
-    prime_speed = 0.07          # To be changed
+    # Prime information
+    prime_speed = 15 / 60                   # Division by 60 is required for conversion reasons
     prime_volume = 2
 
+    # Solvent sample information
     solvent_sample_volume = 1
     solvent_pump_speed = 0.07
     solvent_spectrum_time = 65
 
+    # Sample information
     sample_volume = 0.9
     sample_spectrum_time = 55
-    sample_pump_speed = 0.07    # To be changed
+    sample_pump_speed = 2 / 60              # Division by 60 is required for conversion reasons
     
-    experiment_run_time = 14400     # 4 hours in sec
-
-
-
+    # Experiment information
+    experiment_run_time = 14400             # 4 hours in sec
     experiment_name = 'Test1'
+    
+    # Cleaning information
+    clean_speed = 6 / 60                    # Division by 60 is required for conversion reasons
+    wet_solvent_clean_volume = 3
+    water_clean_volume = 4
+    solvent_clean_volume = 3
+    air_clean_volume = 20
+
+    # Spectra information
     icIR_template_name = 'DigitalDiscoveryProject'                            
-    spectra_location = 'Digital Discovery Project\\' + experiment_name    
-    # experiment1 = DigitalDiscoveryReaction('Test1', solvent_valve, waste_valve, water_valve, ir_valve, prime_volume)
+    spectra_location = 'Digital Discovery Project\\' + experiment_name
+    
+    experiment1 = SensingSensitivityReaction(experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed)
     # experiment1.run_experiment()
