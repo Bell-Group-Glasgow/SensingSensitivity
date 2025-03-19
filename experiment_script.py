@@ -49,7 +49,7 @@ class SensingSensitivityReaction():
         
         
         # Only one pump and an IR machine is required for this project.
-        self.pump = Pump('COM1', 12)
+        self.pump = Pump('COM3', 12)
         self.ir_machine = IR_machine('opc.tcp://localhost:62552/iCOpcUaServer')
 
         # Other required attributes
@@ -294,4 +294,4 @@ if __name__=='__main__':
     spectra_location = 'Digital Discovery Project\\' + experiment_name
     
     experiment1 = SensingSensitivityReaction(experiment_name, icIR_template_name, spectra_location, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed)
-    # experiment1.run_experiment()
+    experiment1.run_experiment()

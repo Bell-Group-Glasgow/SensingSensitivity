@@ -213,10 +213,10 @@ if __name__ == "__main__":
     tcp_path = 'opc.tcp://localhost:62552/iCOpcUaServer'
     ir_machine1 = IR_machine(opc_server_path=tcp_path)
     
-    spectra_path = 'digital_discovery\\experiment_1'
-    template_name = 'standard_template'
+    spectra_path = 'Digital Discovery Project\\test1'
+    template_name = 'DigitalDiscoveryProject'
     ir_machine1.start_experiment(spectra_path, template_name)
-    time.sleep(10)
+    time.sleep(15)
     ir_machine1.stop_experiment()
 
     ir_machine1.shutdown()
