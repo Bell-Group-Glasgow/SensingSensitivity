@@ -11,8 +11,8 @@ class SensingSensitivityReaction():
     def __init__(self, experiment_name, icIR_template_name, spectra_location, spectra_path, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed):
                 
         # IR experiment information
-        self.icIR_template_name = icIR_template_name                                    # The template used to start an icIR machine.
-        self.spectra_location = spectra_location                                        # The location where the specta will be saved. This is used by icIR opc server.
+        self.icIR_template_name = icIR_template_name                                    # The template used to start an icIR machine. If not written in specified format, icIR wont start experiment.
+        self.spectra_location = spectra_location                                        # The location where the specta will be saved. This is used by icIR opc server. If not written in specified format, icIR wont start experiment (should be a subdirectory of iC IR Experiments folder, where subfolders are seperated by \\).
         self.spectra_path = spectra_path                                                # The path (string) to the folder to save IR spectra. This is used by the python class.
 
         # Experiment information
@@ -132,23 +132,6 @@ class SensingSensitivityReaction():
                 print('Please add an appropiate input')
         print()
     
-    def mix_check(self):
-        """Checking is 50/50 sample has been chaged."""
-
-        exit_loop = False
-        while not exit_loop:
-            mix_input = input("Did you change the sample vial to a 50/50 mix? (Yes/No): ")
-            
-            if mix_input.lower() in ['y', 'yes']:
-                return True
-
-            elif mix_input.lower() in ['no', 'n']:
-                return False
-
-            else:
-                print('Please add an appropiate input')
-        print()
-
     def check_sample_setup(self):
         """Before more samples are run, the system needs to be setup and checked by the chemist."""
     
@@ -173,6 +156,7 @@ class SensingSensitivityReaction():
                 print('Please add an appropiate input')
 
         # The second check: if flasks are setup appropiatly.
+        check_2 = False
         exit_loop = False
         if check_1 == True:
             while not exit_loop:
@@ -180,19 +164,42 @@ class SensingSensitivityReaction():
             
                 if check_2_input.lower() in ['y', 'yes']:
                     self.sample_setup_appropiate = True
-                    print(self.sample_setup_appropiate)
                     exit_loop = True
+                    check_2 = True
                     print()
 
                 elif check_2_input.lower() in ['e', 'exit']:
                     exit_loop = True
+                    self.sample_setup_appropiate = False
 
                 elif check_2_input.lower() in ['no', 'n']:
                     print('Please make sure to connect the sample flask to the ReactIR.')
 
                 else:
                     print('Please add an appropiate input')
+
+        # The thrid check: if a 50/50 sample need to be introduced.
+        if check_2:
+            exit_loop = False
+            while not exit_loop:
+                mix_input = input("Do you have to change the sample vial to a 50/50 mix after 2 hours? (Yes/No/Exit): ")
+                
+                if mix_input.lower() in ['y', 'yes']:
+                    self.requires_50_50_mix = True
+                    exit_loop = True
+
+                elif mix_input.lower() in ['no', 'n']:
+                    exit_loop = True
+                
+                elif mix_input.lower() in ['e', 'exit']:
+                    exit_loop = True
+                    self.sample_setup_appropiate = False
+
+                else:
+                    print('Please add an appropiate input')
+
         print()
+
         
     def collect_sample(self, mix=False):
         """Collecting the spectra of a sample.
@@ -243,6 +250,7 @@ class SensingSensitivityReaction():
                     if self.mix_check():
                         self.collect_sample(mix=True)
                         mix_check_bool = False
+                        continue_loop = False
                     else:
                         continue_loop = False
                         mix_check_bool = False
@@ -307,12 +315,11 @@ class SensingSensitivityReaction():
         self.pump.shutdown()
     
     def run_experiment(self):
-        """Runnning through a complete experiment."""
+        """Runnning through a complet e experiment."""
 
         self.prime_lines()
         self.collect_solvent_sample()
         self.check_sample_setup()
-        self.additional_mix_sample_check()
         
         # Checking if the experiment has been set up appropiatly.
         if self.sample_setup_appropiate:
@@ -362,7 +369,7 @@ if __name__=='__main__':
     # Spectra information
     icIR_template_name = 'DigitalDiscoveryProject'                            
     spectra_location = 'Digital Discovery Project\\' + experiment_name
-    spectra_path = ''
+    spectra_path = 'C:/Users/localadm-lablaptop/Documents/iC IR Experiments/Digital Discovery Project'
     
     experiment1 = SensingSensitivityReaction(experiment_name, icIR_template_name, spectra_location, spectra_path, solvent_valve, waste_valve, water_valve, air_valve, ir_valve, prime_volume, prime_speed, solvent_sample_volume, solvent_pump_speed, solvent_spectrum_time, sample_volume, sample_spectrum_time, sample_pump_speed, experiment_run_time, clean_speed)
     experiment1.run_experiment()
