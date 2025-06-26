@@ -3,6 +3,7 @@ import sys
 import time
 from modified_pump import Pump
 from ir_machine import IR_machine
+from ika.magnetic_stirrer import MagneticStirrer
 
 
 class SensingSensitivityReaction():
@@ -57,7 +58,14 @@ class SensingSensitivityReaction():
 
         # Other required attributes
         self.sample_setup_appropiate = False                                            # Boolean to check if system has been set up well for sample preperation.
-        self.requires_50_50_mix = False                                                 # Booolean to check if the experiment is running with 50_50 mix samples.
+        self.requires_50_50_mix = False 
+        
+        #Start Stirrer
+        self.plate = MagneticStirrer(port=stirrer_port)
+        self.plate.set_target_stir_rate(stir_rate)
+        self.plate.start_stirring()
+
+        print('Stirring set')                                                # Booolean to check if the experiment is running with 50_50 mix samples.
     
     def check_experiment_name(self, experiment_name):
         """Checks if the exerpiment name already has any files associated with it."""
@@ -354,6 +362,10 @@ if __name__=='__main__':
     sample_volume = 0.9
     sample_spectrum_time = 12
     sample_pump_speed = 16 / 60              # Division by 60 is required for conversion reasons
+
+    #Stirring information
+    stir_rate = 150
+    stirrer_port = 'COM5'
     
     # Experiment information
     experiment_run_time = 7200            # 4 hours in sec
