@@ -317,7 +317,7 @@ class SensingSensitivityReaction():
     def run_experiment(self):
         """Runnning through a complet e experiment."""
 
-        # self.prime_lines()
+        self.prime_lines()
         self.collect_solvent_sample()
         self.check_sample_setup()
         
