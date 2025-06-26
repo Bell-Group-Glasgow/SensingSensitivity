@@ -178,7 +178,6 @@ class PUMP:
     def connect(self):
         if self.connected:
             raise ValveError(f'An AMF valve or pump is already connected at "{self.port}".')
-
         try:
             self.ser = serial.Serial(self.port, **self.CONNECTION_PARAMS)
             self.connected = True

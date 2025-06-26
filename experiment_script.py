@@ -317,7 +317,7 @@ class SensingSensitivityReaction():
     def run_experiment(self):
         """Runnning through a complet e experiment."""
 
-        self.prime_lines()
+        # self.prime_lines()
         self.collect_solvent_sample()
         self.check_sample_setup()
         
@@ -348,16 +348,16 @@ if __name__=='__main__':
     # Solvent sample information
     solvent_sample_volume = 1
     solvent_pump_speed = 0.07
-    solvent_spectrum_time = 65
+    solvent_spectrum_time = 12
 
     # Sample information
     sample_volume = 0.9
-    sample_spectrum_time = 55
-    sample_pump_speed = 2 / 60              # Division by 60 is required for conversion reasons
+    sample_spectrum_time = 12
+    sample_pump_speed = 16 / 60              # Division by 60 is required for conversion reasons
     
     # Experiment information
-    experiment_run_time = 14400             # 4 hours in sec
-    experiment_name = 'Test1'
+    experiment_run_time = 7200            # 4 hours in sec
+    experiment_name = 'MnN_106_3mg_Tol_18G_15sScans_3'
     
     # Cleaning information
     clean_speed = 6 / 60                    # Division by 60 is required for conversion reasons
@@ -367,7 +367,7 @@ if __name__=='__main__':
     air_clean_volume = 20
 
     # Spectra information
-    icIR_template_name = 'DigitalDiscoveryProject'                            
+    icIR_template_name = 'DigitalDiscoveryProject_Updated'                            
     spectra_location = 'Digital Discovery Project\\' + experiment_name
     spectra_path = 'C:/Users/localadm-lablaptop/Documents/iC IR Experiments/Digital Discovery Project'
     
