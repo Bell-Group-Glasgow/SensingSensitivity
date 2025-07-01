@@ -2,7 +2,7 @@ import os
 import sys
 import time
 from LiquidHandling import Pump
-from ReactPyR import ReactPyR
+from ReactPyR.ReactPyR import ReactPyR
 from ika.magnetic_stirrer import MagneticStirrer
 
 
