@@ -8,7 +8,7 @@ import pickle
 import matplotlib.pylab as plt
 import numpy as np
 
-class IR_machine():
+class ReactPyR():
     """The icIR machine can only be controlled via its OPC UA server. This class interfaces with the server to control the icIR machine."""
     
     def __init__(self, opc_server_path: str=None):        
@@ -211,12 +211,12 @@ if __name__ == "__main__":
 
     #Example use
     tcp_path = 'opc.tcp://localhost:62552/iCOpcUaServer'
-    ir_machine1 = IR_machine(opc_server_path=tcp_path)
+    ReactPyR1 = ReactPyR(opc_server_path=tcp_path)
     
     spectra_path = 'Digital Discovery Project\\test1'
     template_name = 'DigitalDiscoveryProject'
-    ir_machine1.start_experiment(spectra_path, template_name)
+    ReactPyR1.start_experiment(spectra_path, template_name)
     time.sleep(15)
-    ir_machine1.stop_experiment()
+    ReactPyR1.stop_experiment()
 
-    ir_machine1.shutdown()
+    ReactPyR1.shutdown()

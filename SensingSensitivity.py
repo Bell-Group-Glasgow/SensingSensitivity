@@ -1,8 +1,8 @@
 import os
 import sys
 import time
-from modified_pump import Pump
-from ir_machine import IR_machine
+from LiquidHandling import Pump
+from ReactPyR import ReactPyR
 from ika.magnetic_stirrer import MagneticStirrer
 
 
@@ -54,11 +54,12 @@ class SensingSensitivityReaction():
         
         # Only one pump and an IR machine is required for this project.
         self.pump = Pump('COM3', 12)
-        self.ir_machine = IR_machine('opc.tcp://localhost:62552/iCOpcUaServer')
+        self.ReactPyR = ReactPyR('opc.tcp://localhost:62552/iCOpcUaServer')
 
         # Other required attributes
         self.sample_setup_appropiate = False                                            # Boolean to check if system has been set up well for sample preperation.
         self.requires_50_50_mix = False 
+        self.first = False
         
         #Start Stirrer
         self.plate = MagneticStirrer(port=stirrer_port)
@@ -102,24 +103,24 @@ class SensingSensitivityReaction():
         
         # Strating icIR experiment 
         print('Starting icIR experiment')
-        self.ir_machine.start_experiment(self.spectra_location, self.icIR_template_name)
+        self.ReactPyR.start_experiment(self.spectra_location, self.icIR_template_name)
 
         # Collecting solvent spectra
         print('Collecting solvent sample spectra')
         time.sleep(self.solvent_spectrum_time)
 
-        self.ir_machine.pause_experiment()
+        self.ReactPyR.pause_experiment()
 
         # transfer from IR back to solvent
         print('Transfering solvent sample back to ir')
         self.pump.transfer(
             from_position=self.ir_valve,
             to_position=self.solvent_valve,
-            volume=self.solvent_sample_volume*1.5,
+            volume=self.solvent_sample_volume*1.1,
             aspirate_speed=self.solvent_pump_speed,
             dispense_speed=self.solvent_pump_speed
         )
-        
+
         print()
     
     def additional_mix_sample_check(self):
@@ -134,6 +135,7 @@ class SensingSensitivityReaction():
                 exit_loop = True
 
             elif mix_input.lower() in ['e', 'exit', 'no', 'n']:
+                self.requires_50_50_mix = False
                 exit_loop = True
 
             else:
@@ -143,68 +145,25 @@ class SensingSensitivityReaction():
     def check_sample_setup(self):
         """Before more samples are run, the system needs to be setup and checked by the chemist."""
     
-        # The first check: if there is enough solvent.
-        check_1 = False
+       #Check if a control sample needs to be run at the end of the experiment 
         exit_loop = False
         while not exit_loop:
-            check_1_input = input("Have you lifted the solvent line above the liquid level? (Yes/No/Exit): ")
+            mix_input = input("Do you have to change the sample vial to a 50/50 mix after the experiment is complete? (Yes/No/Exit): ")
             
-            if check_1_input.lower() in ['y', 'yes']:
-                check_1 = True
-                exit_loop = True
-                print()
-
-            elif check_1_input.lower() in ['e', 'exit']:
+            if mix_input.lower() in ['y', 'yes']:
+                self.requires_50_50_mix = True
                 exit_loop = True
 
-            elif check_1_input.lower() in ['no', 'n']:
-                print('Please make sure to lift the solvent line above the liquid level.')
+            elif mix_input.lower() in ['no', 'n']:
+                self.requires_50_50_mix = False
+                exit_loop = True
+            
+            elif mix_input.lower() in ['e', 'exit']:
+                exit_loop = True
+                self.sample_setup_appropiate = False
 
             else:
                 print('Please add an appropiate input')
-
-        # The second check: if flasks are setup appropiatly.
-        check_2 = False
-        exit_loop = False
-        if check_1 == True:
-            while not exit_loop:
-                check_2_input = input("Have you connected the sample flask to the ReactIR? (Yes/No/Exit): ")
-            
-                if check_2_input.lower() in ['y', 'yes']:
-                    self.sample_setup_appropiate = True
-                    exit_loop = True
-                    check_2 = True
-                    print()
-
-                elif check_2_input.lower() in ['e', 'exit']:
-                    exit_loop = True
-                    self.sample_setup_appropiate = False
-
-                elif check_2_input.lower() in ['no', 'n']:
-                    print('Please make sure to connect the sample flask to the ReactIR.')
-
-                else:
-                    print('Please add an appropiate input')
-
-        # The thrid check: if a 50/50 sample need to be introduced.
-        if check_2:
-            exit_loop = False
-            while not exit_loop:
-                mix_input = input("Do you have to change the sample vial to a 50/50 mix after 2 hours? (Yes/No/Exit): ")
-                
-                if mix_input.lower() in ['y', 'yes']:
-                    self.requires_50_50_mix = True
-                    exit_loop = True
-
-                elif mix_input.lower() in ['no', 'n']:
-                    exit_loop = True
-                
-                elif mix_input.lower() in ['e', 'exit']:
-                    exit_loop = True
-                    self.sample_setup_appropiate = False
-
-                else:
-                    print('Please add an appropiate input')
 
         print()
 
@@ -217,16 +176,17 @@ class SensingSensitivityReaction():
         print('Aspirating the sample from IR machine.')
         self.pump.switch(self.ir_valve)
         self.pump.move(self.sample_volume, self.sample_pump_speed)
+        print()
 
         # resume spectra aquisition
         print('Collecting the spectrum of the sample.')
-        self.ir_machine.resume_experiment()
+        self.ReactPyR.resume_experiment()
         if mix:
             time.sleep(180)
         else:
             time.sleep(self.sample_spectrum_time)
 
-        self.ir_machine.pause_experiment()
+        self.ReactPyR.pause_experiment()
         
         # Dispensing back the drawn volume
         print('Returning the sample back to IR.')
@@ -238,7 +198,23 @@ class SensingSensitivityReaction():
         """Collecting spectra of sample."""
         
         print('Collecting the spectra of the first sample')
-        self.collect_sample()
+
+        # resume spectra aquisition
+        self.ReactPyR.resume_experiment()
+        time.sleep(self.sample_spectrum_time)
+        self.ReactPyR.pause_experiment()
+        
+        # Dispensing back the drawn volume
+
+        print('Transfering air to IR machine for to reset')
+        self.pump.transfer(
+            from_position=self.air_valve,
+            to_position=self.ir_valve,
+            volume=self.solvent_sample_volume*1.1,
+            aspirate_speed=self.sample_pump_speed,
+            dispense_speed=self.sample_pump_speed)
+        self.first=False
+        print()
         
     def continue_sample_collection(self):
         """Collecting samples for the remainder of the experiment run time."""
@@ -254,7 +230,7 @@ class SensingSensitivityReaction():
             
             # If it a 50/50 mix is required and 2 hours have elapsed, the sample needs to be changed then an additional 3 scans are required.
             if self.requires_50_50_mix:
-                if (time.time()-start_time)>7200 and mix_check_bool:
+                if (time.time()-start_time)>(experiment_run_time/2) and mix_check_bool:
                     if self.mix_check():
                         self.collect_sample(mix=True)
                         mix_check_bool = False
@@ -271,7 +247,7 @@ class SensingSensitivityReaction():
         """Stopping IR experiment."""
         
         print('Stopping IR experiment')
-        self.ir_machine.stop_experiment()
+        self.ReactPyR.stop_experiment()
         print()
 
     def clean(self):
@@ -319,22 +295,23 @@ class SensingSensitivityReaction():
         """Shuts down pumps and ir machine."""
 
         # Shutting down
-        self.ir_machine.shutdown()
+        self.ReactPyR.shutdown()
         self.pump.shutdown()
     
     def run_experiment(self):
         """Runnning through a complet e experiment."""
 
+        self.check_sample_setup()
         self.prime_lines()
         self.collect_solvent_sample()
-        self.check_sample_setup()
+        
         
         # Checking if the experiment has been set up appropiatly.
-        if self.sample_setup_appropiate:
-            self.collect_first_sample()
-            self.continue_sample_collection()
-            self.stop_experiment()          
-            self.clean()
+        # if self.sample_setup_appropiate:
+        self.collect_first_sample()
+        self.continue_sample_collection()
+        self.stop_experiment()          
+        self.clean()
         
         self.shut_down()                 
 
@@ -368,8 +345,8 @@ if __name__=='__main__':
     stirrer_port = 'COM5'
     
     # Experiment information
-    experiment_run_time = 7200            # 4 hours in sec
-    experiment_name = 'MnN_106_3mg_Tol_18G_15sScans_3'
+    experiment_run_time = 14400           # 4 hours in sec 14400
+    experiment_name = 'TestTubingLength_7'
     
     # Cleaning information
     clean_speed = 6 / 60                    # Division by 60 is required for conversion reasons
