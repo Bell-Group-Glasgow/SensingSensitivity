@@ -20,3 +20,5 @@ Dependencies:
 IKA Stirrer hotplate (https://pypi.org/project/ika/)
 
 For use of this code the COM ports for the LSPOne and IKA hotplate must be identified using Device Manager and updated within. 
+
+![Hardware Setup](/images/Hardware_DD.png)
