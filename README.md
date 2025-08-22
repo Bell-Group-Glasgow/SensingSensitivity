@@ -11,7 +11,7 @@ This work is licensed under a
 
 # Sensing Sensitivity
 
-This package is associated with the paper "ReactPyrR: A Python workflow for ReactIR allows for the quantification of the stability of sensitive compounds in air" by the Bell Group. 
+This package is associated with the paper "ReactPyrR: A Python workflow for ReactIR allows for the quantification of the stability of sensitive compounds in air" by the Bell Group. Please see this manuscript for examples and further details of how the SensingSensitivity experiment functions. 
 
 This repo allows users to conduct experiments monitoring the kinetics of degradation of air-sensitive compounds in air and includes liquid handling control via a [LSPOne Syringe Pump](https://amf.ch/product/lspone-laboratory-syringe-pump/), stirring via an IKA RCT Digital Hotplate and [ReactIR15 Spectrometer](https://www.mt.com/dam/product_organizations/autochem/reactir/ReactIR-15.pdf) through Mettler Toledo's [iCIR software](https://www.mt.com/gb/en/home/products/L1_AutochemProducts/automated-reactor-in-situ-analysis-software/ic-ir-instrument.html). 
 
@@ -19,34 +19,86 @@ This repo allows users to conduct experiments monitoring the kinetics of degrada
 
 ![Software](/images/iCIR Screenshot.png)
 
-All scripts created using Python 3.9.10.
+All scripts created using Python 3.13.0. 
 
 # Installation
 
+Within the SensingSensitivity folder: 
+
     pip install -r requirements.txt
-
-# ReactPyR
-
-ReactPyR was developed to allow Python control of Mettler's ReactIR system via their iCIR software. Node IDs were obtained using UA Expert.
-
-
-
-This project was developed and tested using Windows 10 and on a ReactIR15 system and is written in Python3 using opcua-asyncua (https://github.com/FreeOpcUa/opcua-asyncio). 
-
-![OPCUA](ReactPyR/images/OPCUA.PNG)
-
 
 # Dependencies: 
 
 IKA Stirrer hotplate (https://pypi.org/project/ika/)
 
-For use of this code the COM ports for the LSPOne and IKA hotplate must be identified using Device Manager and updated within. 
+LSPOne SyringePump (https://amf.ch/product/lspone-laboratory-syringe-pump/). Original code provided by supplier is included in supplier_pump.py. A newer version of this can be found here: https://pypi.org/project/AMFTools/
 
+For use of this code the COM ports for the LSPOne and IKA hotplate must be identified using Device Manager and updated within SensingSensitivity.py on lines 55 and 344 respectively on first use. 
+
+# ReactPyR
+ReactPyR 2025 was developed by Mr Emanuele Berardi is licensed under Creative Commons Attribution-NonCommercial 4.0 International 
+
+ReactPyR was developed to allow Python control of Mettler's ReactIR system via their iCIR software. 
+
+This project was developed and tested using Windows 10 and on a ReactIR15 system and is written in Python3.13.0 using asyncua (pypi.org/project/asyncua/).All testing of ReactPyR was conducted with iCIR version 7.1.91 SP1 and iC OPC UA Client version 1.2.22. 
+
+Node IDs were obtained using UA Expert and may differ with different ReactIR systems.
+![UA Expert](images/Finding_Path_Methods.png)
+
+This project was developed and tested using Windows 10 and on a ReactIR15 system and is written in Python3 using opcua-asyncua (https://github.com/FreeOpcUa/opcua-asyncio). 
+
+![OPCUA](ReactPyR/images/OPCUA.PNG)
+
+## Example Use
+'''Python
+import asyncio
+    from ReactPyR import ReactPyR
+
+    # Example with all the above functionality.
+
+    async def main():
+        """The main event loop demonstrating basic function calls."""
+
+        # Making the object.
+        tcp_path = 'opc.tcp://localhost:62552/iCOpcUaServer'
+        ir_machine = ReactPyR(opc_server_path=tcp_path)
+
+        # Starting an experiment.
+        template_name = 'SensingSensitivityTemplate'
+        spectra_path = 'DSensing Sensitivity Project\\test1'
+        await ir_machine.start_experiment(spectra_path, template_name, False)
+
+        # Retrieving the intensities of previous background spectra.
+        background = await ir_machine.get_last_background_spectra()
+
+        # Collecting all the raw and processed IR spectra.
+        await ir_machine.collect_raw_spectra()
+        await asyncio.sleep(120)
+
+        await ir_machine.collect_treated_spectra()
+
+        # Changing sampling interval to 20 seconds.
+        new_sampling_interval = 20
+        await ir_machine.set_sampling_interval(new_sampling_interval)
+        current_sampling_interval = await ir_machine.get_current_sampling_interval()
+        if new_sampling_interval == current_sampling_interval:
+            print('Sampling interval changed successfully.')
+
+        # Pausing experiment for 20 seconds then resuming for another 20.
+        await ir_machine.pause_experiment()
+        await asyncio.sleep(20)
+        await ir_machine.resume_experiment()
+        await asyncio.sleep(20)
+
+        # Stopping experiment
+        await ir_machine.stop_experiment()
+
+    asyncio.run(main())
 
 # Data Processing
 
 [READ ME.txt](https://github.com/user-attachments/files/21892078/READ.ME.txt)
-ReactIR Data Processing © 2025 by Miss Marina Gladkikh is licensed under Creative Commons Attribution-NonCommercial 4.0 International 
+ReactIR Data Processing was developed by Miss Marina Gladkikh is licensed under Creative Commons Attribution-NonCommercial 4.0 International 
 
 The python scripts are designed to process data acquired from the ReactIR™ 15 spectrometer as csv files.
 
