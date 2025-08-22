@@ -50,7 +50,7 @@ This project was developed and tested using Windows 10 and on a ReactIR15 system
 ![OPCUA](ReactPyR/images/OPCUA.PNG)
 
 ## Example Use
-'''Python
+```Python
 import asyncio
     from ReactPyR import ReactPyR
 
