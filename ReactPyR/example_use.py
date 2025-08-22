@@ -9,7 +9,7 @@ So far, the OPC IR client is capable of:
 if __name__ == "__main__":
 
     import asyncio
-    from ReactPyR_asyncua import ReactPyR
+    from ReactPyR import ReactPyR
 
     # Example with all the above functionality.
 

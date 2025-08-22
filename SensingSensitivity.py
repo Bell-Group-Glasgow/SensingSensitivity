@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 from LiquidHandling import Pump
 from ReactPyR.ReactPyR import ReactPyR
