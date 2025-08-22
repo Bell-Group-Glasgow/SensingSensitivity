@@ -27,6 +27,25 @@ Within the SensingSensitivity folder:
 
     pip install -r requirements.txt
 
+# Usage
+
+For SensingSensitivity Experiment (does not include Data Analysis):
+
+```Python
+	python SensingSensitivity.py
+```
+For ReactPyR only: 
+You should generate a script such as that shown in example_use.py
+
+```Python
+	cd ReactPyR
+	python example_use.py
+```
+For Data Analysis: 
+``` Python
+	cd 'ReactIR_Data Processing'
+	python main.py
+```
 # Dependencies: 
 
 IKA Stirrer hotplate (https://pypi.org/project/ika/)
